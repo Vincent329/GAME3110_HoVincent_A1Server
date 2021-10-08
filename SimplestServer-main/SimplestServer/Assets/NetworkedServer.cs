@@ -12,7 +12,7 @@ public class NetworkedServer : MonoBehaviour
     int reliableChannelID;
     int unreliableChannelID;
     int hostID;
-    int socketPort = 50653;
+    int socketPort = 5491;
     LinkedList<PlayerAccount> playerAccounts;
 
     // Start is called before the first frame update
