@@ -12,7 +12,7 @@ public class NetworkedServer : MonoBehaviour
     int reliableChannelID;
     int unreliableChannelID;
     int hostID;
-    int socketPort = 5491;
+    int socketPort = 10563;
 
     LinkedList<PlayerAccount> playerAccounts;
 
@@ -94,6 +94,7 @@ public class NetworkedServer : MonoBehaviour
 
         string[] csv = msg.Split(',');
 
+        // when the message has been received, get the signifier
         int signifier = int.Parse(csv[0]);
 
         if (signifier == ClientToServerSignifiers.CreateAccount)
@@ -120,7 +121,7 @@ public class NetworkedServer : MonoBehaviour
             if (nameInUse)
             {
                 SendMessageToClient(ServerToClientSignifiers.AccountCreationFailed + "", id); // using the id that was sent in the process message
-
+                                                                                              // send back to the client that account creation ahs failed
             }
             else
             {
@@ -175,7 +176,7 @@ public class NetworkedServer : MonoBehaviour
 
 
         }
-        else if (signifier == ClientToServerSignifiers.WaitingToJoinQueue)
+        else if (signifier == ClientToServerSignifiers.WaitingToJoinGameRoom)
         {
             Debug.Log("We need to get this player into a waiting queue");
             // first time that a client sends a message, store the id of the client with this variable
@@ -186,6 +187,7 @@ public class NetworkedServer : MonoBehaviour
                     
             else // second time you run through
             {
+                
                 // but what if the player has left the game room?
 
                 // add game room to a list of game rooms
@@ -195,11 +197,12 @@ public class NetworkedServer : MonoBehaviour
                 // send message to both clients
                 SendMessageToClient(ServerToClientSignifiers.GameStart + "", gr.player1);
                 SendMessageToClient(ServerToClientSignifiers.GameStart + "", gr.player2);
-
+                Debug.Log("Room Established");
 
                 playerWaitingForMatchWithID = -1; // meaning the player isn't waiting anymore
             }
         } 
+        // once we have a game room set up
         else if (signifier == ClientToServerSignifiers.TicTacToe)
         {
             GameRoom gr = GetGameRoomWithClientID(id);
@@ -214,6 +217,25 @@ public class NetworkedServer : MonoBehaviour
                 }
             }
         }
+        else if (signifier == ClientToServerSignifiers.PresetMessage)
+        {
+            Debug.Log("Process Message: " + ClientToServerSignifiers.PresetMessage + "," + csv[1]);
+            GameRoom gr = GetGameRoomWithClientID(id);
+            
+            if (gr != null)
+            {
+                if (gr.player1 == id)
+                {
+                    SendMessageToClient(ServerToClientSignifiers.SendMessage + "," + csv[1], gr.player2);
+                }
+                else
+                {
+                    SendMessageToClient(ServerToClientSignifiers.SendMessage + "," + csv[1], gr.player1);
+                }
+            }
+        }
+
+
     }
 
     private void SavePlayerAccounts()
@@ -282,12 +304,16 @@ public class GameRoom
     }
 }
 
+
 public static class ClientToServerSignifiers
 {
     public const int CreateAccount = 1;
     public const int Login = 2;
-    public const int WaitingToJoinQueue = 3;
+    public const int WaitingToJoinGameRoom = 3;
     public const int TicTacToe = 4;
+    public const int TicTacToeP1Action = 5;
+    public const int TicTacToeP2Action = 6;
+    public const int PresetMessage = 7;
 }
 public static class ServerToClientSignifiers
 {
@@ -297,4 +323,6 @@ public static class ServerToClientSignifiers
     public const int AccountCreationFailed = 4;
     public const int OpponentPlay = 5;
     public const int GameStart = 6;
+    public const int SendMessage = 7;
+
 }
