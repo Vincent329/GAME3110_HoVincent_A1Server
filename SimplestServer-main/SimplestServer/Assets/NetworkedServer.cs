@@ -242,11 +242,11 @@ public class NetworkedServer : MonoBehaviour
                 Debug.Log(ServerToClientSignifiers.OpponentPlay + "," + csv[1] + "," + csv[2] + "," + csv[3]);
                 if (gr.player1 == id)
                 {
-                    SendMessageToClient(ServerToClientSignifiers.OpponentPlay + "," + csv[1] + "," + csv[2] + "," + gr.player1, gr.player2); // might not need this
+                    SendMessageToClient(ServerToClientSignifiers.OpponentPlay + "," + csv[1] + "," + csv[2] + "," + csv[3], gr.player2); // might not need this
                 }
                 else
                 {
-                    SendMessageToClient(ServerToClientSignifiers.OpponentPlay + "," + csv[1] + "," + csv[2] + "," + gr.player2, gr.player1);
+                    SendMessageToClient(ServerToClientSignifiers.OpponentPlay + "," + csv[1] + "," + csv[2] + "," + csv[3], gr.player1);
                 }
             }
         }
