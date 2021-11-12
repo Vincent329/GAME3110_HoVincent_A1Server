@@ -217,18 +217,36 @@ public class NetworkedServer : MonoBehaviour
                 playerWaitingForMatchWithID = -1; // meaning the player isn't waiting anymore
             }
         } 
-        // once we have a game room set up
-        else if (signifier == ClientToServerSignifiers.TicTacToe)
+        // once we have a game room set up ... not actually sending this signifier in
+        else if (signifier == ClientToServerSignifiers.TicTacToe) 
         {
             GameRoom gr = GetGameRoomWithClientID(id);
             if (gr != null)
             {
                 if (gr.player1 == id)
                 {
-                    SendMessageToClient(ServerToClientSignifiers.OpponentPlay + "", gr.player1);
+                    SendMessageToClient(ServerToClientSignifiers.OpponentPlay + "", gr.player1); // might not need this
                 } else
                 {
                     SendMessageToClient(ServerToClientSignifiers.OpponentPlay + "", gr.player2);
+                }
+            }
+        }
+        else if (signifier == ClientToServerSignifiers.PlayerAction)
+        {
+            GameRoom gr = GetGameRoomWithClientID(id);
+            if (gr != null)
+            {
+                // if it was player 1 that sent this in, send over to player 2
+                // intended order should be signifier, row, column, playerID
+                Debug.Log(ServerToClientSignifiers.OpponentPlay + "," + csv[1] + "," + csv[2] + "," + csv[3]);
+                if (gr.player1 == id)
+                {
+                    SendMessageToClient(ServerToClientSignifiers.OpponentPlay + "," + csv[1] + "," + csv[2] + "," + gr.player1, gr.player2); // might not need this
+                }
+                else
+                {
+                    SendMessageToClient(ServerToClientSignifiers.OpponentPlay + "," + csv[1] + "," + csv[2] + "," + gr.player2, gr.player1);
                 }
             }
         }
