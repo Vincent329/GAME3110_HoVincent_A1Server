@@ -21,6 +21,10 @@ public class NetworkedServer : MonoBehaviour
     const string IndexFilePath = "PlayerAccounts.txt";
     string playerAccountFilePath;
 
+    // replay system
+    const string ReplayFilePath = "ReplayList.txt";
+    string replayListFilePath;
+
     int playerWaitingForMatchWithID = -1;
 
     LinkedList<GameRoom> gameRooms;
@@ -37,6 +41,7 @@ public class NetworkedServer : MonoBehaviour
 
 
         playerAccountFilePath = Application.dataPath + Path.DirectorySeparatorChar + IndexFilePath;
+        
         playerAccounts = new LinkedList<PlayerAccount>();
         gameRooms = new LinkedList<GameRoom>();
         // READ THE LIST
@@ -71,11 +76,18 @@ public class NetworkedServer : MonoBehaviour
                 break;
             case NetworkEventType.DisconnectEvent:
                 Debug.Log("Disconnection, " + recConnectionID);
+                // should find a way to disconnect the game room when we cut off
+                
                 break;
         }
 
     }
 
+    /// <summary>
+    /// Sends a message to the specific id
+    /// </summary>
+    /// <param name="msg"></param>
+    /// <param name="id"></param>
     public void SendMessageToClient(string msg, int id)
     {
         byte error = 0;
@@ -193,10 +205,13 @@ public class NetworkedServer : MonoBehaviour
                 // add game room to a list of game rooms
                 GameRoom gr = new GameRoom(playerWaitingForMatchWithID, id);
                 gameRooms.AddLast(gr);
-
+                
                 // send message to both clients
-                SendMessageToClient(ServerToClientSignifiers.GameStart + "", gr.player1);
-                SendMessageToClient(ServerToClientSignifiers.GameStart + "", gr.player2);
+                // TODO: upon game start, assign the proper ID to the player... just pass in gr.playerNum
+                SendMessageToClient(ServerToClientSignifiers.GameStart + "," + gr.player1, gr.player1);
+                SendMessageToClient(ServerToClientSignifiers.GameStart + "," + gr.player2, gr.player2);
+
+
                 Debug.Log("Room Established");
 
                 playerWaitingForMatchWithID = -1; // meaning the player isn't waiting anymore
@@ -311,9 +326,8 @@ public static class ClientToServerSignifiers
     public const int Login = 2;
     public const int WaitingToJoinGameRoom = 3;
     public const int TicTacToe = 4;
-    public const int TicTacToeP1Action = 5;
-    public const int TicTacToeP2Action = 6;
-    public const int PresetMessage = 7;
+    public const int PlayerAction = 5;
+    public const int PresetMessage = 6;
 }
 public static class ServerToClientSignifiers
 {
@@ -321,7 +335,7 @@ public static class ServerToClientSignifiers
     public const int LoginFailed = 2;
     public const int AccountCreationComplete = 3;
     public const int AccountCreationFailed = 4;
-    public const int OpponentPlay = 5;
+    public const int OpponentPlay = 5; // once player makes an action, send an action back to the receiver client
     public const int GameStart = 6;
     public const int SendMessage = 7;
 
