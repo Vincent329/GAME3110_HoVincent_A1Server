@@ -15,6 +15,7 @@ public class NetworkedServer : MonoBehaviour
     int socketPort = 10563;
 
     LinkedList<PlayerAccount> playerAccounts;
+    LinkedList<string> listOfActions;
 
     const int PlayerAccountNameAndPassword = 1;
 
@@ -41,9 +42,11 @@ public class NetworkedServer : MonoBehaviour
 
 
         playerAccountFilePath = Application.dataPath + Path.DirectorySeparatorChar + IndexFilePath;
+        replayListFilePath = Application.dataPath + Path.DirectorySeparatorChar + ReplayFilePath;
         
         playerAccounts = new LinkedList<PlayerAccount>();
         gameRooms = new LinkedList<GameRoom>();
+        listOfActions = new LinkedList<string>();
         // READ THE LIST
         LoadPlayerAccounts();
 
@@ -109,6 +112,7 @@ public class NetworkedServer : MonoBehaviour
         // when the message has been received, get the signifier
         int signifier = int.Parse(csv[0]);
 
+        // SIGNIFIER 1
         if (signifier == ClientToServerSignifiers.CreateAccount)
         {
             Debug.Log("Create Account");
@@ -147,6 +151,7 @@ public class NetworkedServer : MonoBehaviour
                 SavePlayerAccounts();
             }
         }
+        // SIGNIFIER 2
         else if (signifier == ClientToServerSignifiers.Login)
         {
             Debug.Log("Login Account");
@@ -188,6 +193,7 @@ public class NetworkedServer : MonoBehaviour
 
 
         }
+        // SIGNIFIER 3
         else if (signifier == ClientToServerSignifiers.WaitingToJoinGameRoom)
         {
             Debug.Log("We need to get this player into a waiting queue");
@@ -216,8 +222,9 @@ public class NetworkedServer : MonoBehaviour
 
                 playerWaitingForMatchWithID = -1; // meaning the player isn't waiting anymore
             }
-        } 
+        }
         // once we have a game room set up ... not actually sending this signifier in
+        // SIGNIFIER 4
         else if (signifier == ClientToServerSignifiers.TicTacToe) 
         {
             GameRoom gr = GetGameRoomWithClientID(id);
@@ -232,17 +239,18 @@ public class NetworkedServer : MonoBehaviour
                 }
             }
         }
+        // SIGNIFIER 5
         else if (signifier == ClientToServerSignifiers.PlayerAction)
         {
             GameRoom gr = GetGameRoomWithClientID(id);
             if (gr != null)
             {
                 // if it was player 1 that sent this in, send over to player 2
-                // intended order should be signifier, row, column, playerID
+                // intended order should be signifier, row, column, playerID (if player ID is 1, send it to 2 and vice versa)
                 Debug.Log(ServerToClientSignifiers.OpponentPlay + "," + csv[1] + "," + csv[2] + "," + csv[3]);
                 if (gr.player1 == id)
                 {
-                    SendMessageToClient(ServerToClientSignifiers.OpponentPlay + "," + csv[1] + "," + csv[2] + "," + csv[3], gr.player2); // might not need this
+                    SendMessageToClient(ServerToClientSignifiers.OpponentPlay + "," + csv[1] + "," + csv[2] + "," + csv[3], gr.player2);
                 }
                 else
                 {
@@ -250,9 +258,10 @@ public class NetworkedServer : MonoBehaviour
                 }
             }
         }
-        else if (signifier == ClientToServerSignifiers.PresetMessage)
+        // SIGNIFIER 6
+        else if (signifier == ClientToServerSignifiers.SendPresetMessage)
         {
-            Debug.Log("Process Message: " + ClientToServerSignifiers.PresetMessage + "," + csv[1]);
+            Debug.Log("Process Message: " + ClientToServerSignifiers.SendPresetMessage + "," + csv[1]);
             GameRoom gr = GetGameRoomWithClientID(id);
             
             if (gr != null)
@@ -267,7 +276,23 @@ public class NetworkedServer : MonoBehaviour
                 }
             }
         }
+        // SIGNIFIER 7
+        else if (signifier == ClientToServerSignifiers.PlayerWins)
+        {
+            GameRoom gr = GetGameRoomWithClientID(id);
+            if (gr != null)
+            {
 
+                if (gr.player1 == id)
+                {
+                    SendMessageToClient(ServerToClientSignifiers.NotifyOpponentWin + "," + id, gr.player2);
+                }
+                else
+                {
+                    SendMessageToClient(ServerToClientSignifiers.NotifyOpponentWin + "," + id , gr.player1);
+                }
+            }
+        }
 
     }
 
@@ -345,7 +370,12 @@ public static class ClientToServerSignifiers
     public const int WaitingToJoinGameRoom = 3;
     public const int TicTacToe = 4;
     public const int PlayerAction = 5;
-    public const int PresetMessage = 6;
+    public const int SendPresetMessage = 6;
+    public const int PlayerWins = 7;
+    public const int ResetGame = 8;
+    public const int LogAction = 9;
+    public const int RequestReplay = 10;
+
 }
 public static class ServerToClientSignifiers
 {
@@ -356,5 +386,6 @@ public static class ServerToClientSignifiers
     public const int OpponentPlay = 5; // once player makes an action, send an action back to the receiver client
     public const int GameStart = 6;
     public const int SendMessage = 7;
-
+    public const int NotifyOpponentWin = 8; // notify to the opponent that there's a win
+    public const int GameReset = 9;
 }
