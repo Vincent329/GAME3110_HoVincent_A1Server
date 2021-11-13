@@ -293,6 +293,22 @@ public class NetworkedServer : MonoBehaviour
                 }
             }
         }
+        // SIGNIFIER 8
+        else if (signifier == ClientToServerSignifiers.ResetGame)
+        {
+            GameRoom gr = GetGameRoomWithClientID(id);
+            if (gr != null)
+            {
+                if (gr.player1 == id)
+                {
+                    SendMessageToClient(ServerToClientSignifiers.GameReset + "", gr.player2);
+                }
+                else
+                {
+                    SendMessageToClient(ServerToClientSignifiers.GameReset + "", gr.player1);
+                }
+            }
+        }
 
     }
 
