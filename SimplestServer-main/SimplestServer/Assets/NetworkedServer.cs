@@ -245,17 +245,24 @@ public class NetworkedServer : MonoBehaviour
             GameRoom gr = GetGameRoomWithClientID(id);
             if (gr != null)
             {
+                int currentTurn;
                 // if it was player 1 that sent this in, send over to player 2
                 // intended order should be signifier, row, column, playerID (if player ID is 1, send it to 2 and vice versa)
                 Debug.Log(ServerToClientSignifiers.OpponentPlay + "," + csv[1] + "," + csv[2] + "," + csv[3]);
                 if (gr.player1 == id)
                 {
+                    currentTurn = gr.player2;
                     SendMessageToClient(ServerToClientSignifiers.OpponentPlay + "," + csv[1] + "," + csv[2] + "," + csv[3], gr.player2);
                 }
                 else
                 {
+                    currentTurn = gr.player1;
                     SendMessageToClient(ServerToClientSignifiers.OpponentPlay + "," + csv[1] + "," + csv[2] + "," + csv[3], gr.player1);
                 }
+
+                // update turn order
+                SendMessageToClient(ServerToClientSignifiers.ChangeTurn + "," + currentTurn, gr.player1);
+                SendMessageToClient(ServerToClientSignifiers.ChangeTurn + "," + currentTurn, gr.player2);
             }
         }
         // SIGNIFIER 6
@@ -403,5 +410,6 @@ public static class ServerToClientSignifiers
     public const int GameStart = 6;
     public const int SendMessage = 7;
     public const int NotifyOpponentWin = 8; // notify to the opponent that there's a win
-    public const int GameReset = 9;
+    public const int ChangeTurn = 9;
+    public const int GameReset = 10;
 }
