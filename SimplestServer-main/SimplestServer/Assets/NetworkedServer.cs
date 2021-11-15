@@ -216,7 +216,8 @@ public class NetworkedServer : MonoBehaviour
                 // TODO: upon game start, assign the proper ID to the player... just pass in gr.playerNum
                 SendMessageToClient(ServerToClientSignifiers.GameStart + "," + gr.player1, gr.player1);
                 SendMessageToClient(ServerToClientSignifiers.GameStart + "," + gr.player2, gr.player2);
-
+                SendMessageToClient(ServerToClientSignifiers.ChangeTurn + "," + gr.player1, gr.player1);
+                SendMessageToClient(ServerToClientSignifiers.ChangeTurn + "," + gr.player1, gr.player2);
 
                 Debug.Log("Room Established");
 
