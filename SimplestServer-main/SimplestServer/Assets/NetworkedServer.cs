@@ -30,6 +30,14 @@ public class NetworkedServer : MonoBehaviour
 
     LinkedList<GameRoom> gameRooms;
 
+    // tic tac toe UI, for any users joining in part way, keep a record of the board on the server to communicate to the spectator client
+    //
+    // [0,0] [1,0] [2,0]
+    // [0,1] [1,1] [2,1]
+    // [0,2] [1,2] [2,2]
+    //
+    private int[,] ticTacToeServerBoard;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -46,6 +54,8 @@ public class NetworkedServer : MonoBehaviour
         
         playerAccounts = new LinkedList<PlayerAccount>();
         gameRooms = new LinkedList<GameRoom>();
+
+        // REPLAY FUNCTIONALITY, save items on a list of strings
         listOfActions = new LinkedList<string>();
         // READ THE LIST
         LoadPlayerAccounts();
@@ -154,7 +164,6 @@ public class NetworkedServer : MonoBehaviour
         // SIGNIFIER 2
         else if (signifier == ClientToServerSignifiers.Login)
         {
-            Debug.Log("Login Account");
             // log in to existing acccount
             // check if player account name already exists
             // check if password matches
@@ -172,11 +181,14 @@ public class NetworkedServer : MonoBehaviour
                     isNameFound = true;
                     if (p == pa.password)
                     {
+                        Debug.Log("Login Account");
                         SendMessageToClient(ServerToClientSignifiers.LoginComplete + "", id);
                         msgHasBeenSentToClient = true;
                     }
                     else
                     {
+                        Debug.Log("Login Failed");
+
                         SendMessageToClient(ServerToClientSignifiers.LoginFailed + "", id);
                         msgHasBeenSentToClient = true;
                     }
@@ -196,50 +208,71 @@ public class NetworkedServer : MonoBehaviour
         // SIGNIFIER 3
         else if (signifier == ClientToServerSignifiers.WaitingToJoinGameRoom)
         {
-            Debug.Log("We need to get this player into a waiting queue");
             // first time that a client sends a message, store the id of the client with this variable
             if (playerWaitingForMatchWithID == -1)
             {
-                playerWaitingForMatchWithID = id;
-            } 
-                    
+                Debug.Log("We need to get this player into a waiting queue");
+                playerWaitingForMatchWithID = id; // id becomes 1 in the first shot
+            }
+
             else // second time you run through
             {
-                
+
                 // but what if the player has left the game room?
 
                 // add game room to a list of game rooms
+                // player waiting for match with ID = 1, id = 2
                 GameRoom gr = new GameRoom(playerWaitingForMatchWithID, id);
                 gameRooms.AddLast(gr);
-                
+
                 // send message to both clients
                 // TODO: upon game start, assign the proper ID to the player... just pass in gr.playerNum
-                SendMessageToClient(ServerToClientSignifiers.GameStart + "," + gr.player1, gr.player1);
-                SendMessageToClient(ServerToClientSignifiers.GameStart + "," + gr.player2, gr.player2);
-                SendMessageToClient(ServerToClientSignifiers.ChangeTurn + "," + gr.player1, gr.player1);
-                SendMessageToClient(ServerToClientSignifiers.ChangeTurn + "," + gr.player1, gr.player2);
+                // TODO: change so that we can scale up to as many players as we can as spectatorss
+
+                // assign ID
+                SendMessageToClient(ServerToClientSignifiers.GameStart + "," + gr.players[0], gr.players[0]);
+                SendMessageToClient(ServerToClientSignifiers.GameStart + "," + gr.players[1], gr.players[1]);
+
+                // establish turn order
+                SendMessageToClient(ServerToClientSignifiers.ChangeTurn + "," + gr.players[0], gr.players[0]);
+                SendMessageToClient(ServerToClientSignifiers.ChangeTurn + "," + gr.players[0], gr.players[1]);
 
                 Debug.Log("Room Established");
 
-                playerWaitingForMatchWithID = -1; // meaning the player isn't waiting anymore
+                // assuming that the connection ID that's greater than 2 will automatically be considered a spectator
+                if (id > 2)
+                {
+                    // TO-DO: Add spectators when the player count exceeds 2
+                    gr.AddSpectator(id);
+                    SendMessageToClient(ServerToClientSignifiers.MidwayJoin + "", id);
+
+                    // on the local board, update all the board units
+                }
+                else
+                {
+                    playerWaitingForMatchWithID = -1; // meaning the player isn't waiting anymore... would we still need this for spectators
+                }
             }
         }
+
         // once we have a game room set up ... not actually sending this signifier in
         // SIGNIFIER 4
-        else if (signifier == ClientToServerSignifiers.TicTacToe) 
+        else if (signifier == ClientToServerSignifiers.TicTacToe)
         {
             GameRoom gr = GetGameRoomWithClientID(id);
             if (gr != null)
             {
-                if (gr.player1 == id)
+                if (gr.players[0] == id)
                 {
-                    SendMessageToClient(ServerToClientSignifiers.OpponentPlay + "", gr.player1); // might not need this
-                } else
+                    SendMessageToClient(ServerToClientSignifiers.OpponentPlay + "", gr.players[0]); // might not need this
+                }
+                else
                 {
-                    SendMessageToClient(ServerToClientSignifiers.OpponentPlay + "", gr.player2);
+                    SendMessageToClient(ServerToClientSignifiers.OpponentPlay + "", gr.players[1]);
                 }
             }
         }
+
         // SIGNIFIER 5
         else if (signifier == ClientToServerSignifiers.PlayerAction)
         {
@@ -250,20 +283,25 @@ public class NetworkedServer : MonoBehaviour
                 // if it was player 1 that sent this in, send over to player 2
                 // intended order should be signifier, row, column, playerID (if player ID is 1, send it to 2 and vice versa)
                 Debug.Log(ServerToClientSignifiers.OpponentPlay + "," + csv[1] + "," + csv[2] + "," + csv[3]);
-                if (gr.player1 == id)
+                if (gr.players[0] == id)
                 {
-                    currentTurn = gr.player2;
-                    SendMessageToClient(ServerToClientSignifiers.OpponentPlay + "," + csv[1] + "," + csv[2] + "," + csv[3], gr.player2);
+                    currentTurn = gr.players[1];
+                    SendMessageToClient(ServerToClientSignifiers.OpponentPlay + "," + csv[1] + "," + csv[2] + "," + csv[3], gr.players[1]);
                 }
                 else
                 {
-                    currentTurn = gr.player1;
-                    SendMessageToClient(ServerToClientSignifiers.OpponentPlay + "," + csv[1] + "," + csv[2] + "," + csv[3], gr.player1);
+                    currentTurn = gr.players[0];
+                    SendMessageToClient(ServerToClientSignifiers.OpponentPlay + "," + csv[1] + "," + csv[2] + "," + csv[3], gr.players[0]);
                 }
 
                 // update turn order
-                SendMessageToClient(ServerToClientSignifiers.ChangeTurn + "," + currentTurn, gr.player1);
-                SendMessageToClient(ServerToClientSignifiers.ChangeTurn + "," + currentTurn, gr.player2);
+                SendMessageToClient(ServerToClientSignifiers.ChangeTurn + "," + currentTurn, gr.players[0]);
+                SendMessageToClient(ServerToClientSignifiers.ChangeTurn + "," + currentTurn, gr.players[1]);
+
+                foreach (int spectators in gr.spectators)
+                {
+                    SendMessageToClient(ServerToClientSignifiers.UpdateSpectator + "", spectators);
+                }
             }
         }
         // SIGNIFIER 6
@@ -274,14 +312,15 @@ public class NetworkedServer : MonoBehaviour
             
             if (gr != null)
             {
-                if (gr.player1 == id)
+                if (gr.players[0] == id)
                 {
-                    SendMessageToClient(ServerToClientSignifiers.SendMessage + "," + csv[1], gr.player2);
+                    SendMessageToClient(ServerToClientSignifiers.SendMessage + "," + csv[1], gr.players[1]);
                 }
                 else
                 {
-                    SendMessageToClient(ServerToClientSignifiers.SendMessage + "," + csv[1], gr.player1);
+                    SendMessageToClient(ServerToClientSignifiers.SendMessage + "," + csv[1], gr.players[0]);
                 }
+
             }
         }
         // SIGNIFIER 7
@@ -291,13 +330,13 @@ public class NetworkedServer : MonoBehaviour
             if (gr != null)
             {
 
-                if (gr.player1 == id)
+                if (gr.players[0] == id)
                 {
-                    SendMessageToClient(ServerToClientSignifiers.NotifyOpponentWin + "," + id, gr.player2);
+                    SendMessageToClient(ServerToClientSignifiers.NotifyOpponentWin + "," + id, gr.players[1]);
                 }
                 else
                 {
-                    SendMessageToClient(ServerToClientSignifiers.NotifyOpponentWin + "," + id , gr.player1);
+                    SendMessageToClient(ServerToClientSignifiers.NotifyOpponentWin + "," + id , gr.players[0]);
                 }
             }
         }
@@ -307,13 +346,18 @@ public class NetworkedServer : MonoBehaviour
             GameRoom gr = GetGameRoomWithClientID(id);
             if (gr != null)
             {
-                if (gr.player1 == id)
+                if (gr.players[0] == id)
                 {
-                    SendMessageToClient(ServerToClientSignifiers.GameReset + "", gr.player2);
+                    SendMessageToClient(ServerToClientSignifiers.GameReset + "", gr.players[1]);
                 }
                 else
                 {
-                    SendMessageToClient(ServerToClientSignifiers.GameReset + "", gr.player1);
+                    SendMessageToClient(ServerToClientSignifiers.GameReset + "", gr.players[0]);
+                }
+
+                foreach (int spectator in gr.spectators)
+                {
+                    SendMessageToClient(ServerToClientSignifiers.ResetSpectator + "", spectator);
                 }
             }
         }
@@ -356,9 +400,20 @@ public class NetworkedServer : MonoBehaviour
     {
         foreach(GameRoom gr in gameRooms)
         {
-            if (gr.player1 == id || gr.player2 == id)
+            if (gr.players[0] == id || gr.players[1] == id)
             {
                 return gr;
+            } 
+            // check spectator ID
+            else
+            {
+                foreach (int spectator in gr.spectators)
+                {
+                    if (spectator == id)
+                    {
+                        return gr;
+                    }
+                }
             }
         }
         return null;
@@ -377,12 +432,30 @@ public class PlayerAccount
 
 public class GameRoom
 {
-    public int player1, player2;
+    public List<int> players;
+    public List<int> spectators;
     public GameRoom(int playerID1, int playerID2)
     {
-        player1 = playerID1;
-        player2 = playerID2;
+        players = new List<int>();
+        spectators = new List<int>();
+        players.Add(playerID1);
+        players.Add(playerID2);
 
+        // only need to worry about these two
+        Debug.Log("Players " + players[0] + "," + players[1]);
+
+    }
+
+    public GameRoom()
+    {
+        players = new List<int>();
+        
+    }
+
+    // adding a spectator to the game room... could be redundant if spectators is already public
+    public void AddSpectator(int playerID)
+    {
+        spectators.Add(playerID);
     }
 }
 
@@ -413,4 +486,7 @@ public static class ServerToClientSignifiers
     public const int NotifyOpponentWin = 8; // notify to the opponent that there's a win
     public const int ChangeTurn = 9;
     public const int GameReset = 10;
+    public const int MidwayJoin = 11;
+    public const int UpdateSpectator = 12;
+    public const int ResetSpectator = 13;
 }
