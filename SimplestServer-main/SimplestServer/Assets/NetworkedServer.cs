@@ -222,35 +222,41 @@ public class NetworkedServer : MonoBehaviour
 
                 // add game room to a list of game rooms
                 // player waiting for match with ID = 1, id = 2
-                GameRoom gr = new GameRoom(playerWaitingForMatchWithID, id);
-                gameRooms.AddLast(gr);
+                // assign ID
+                // hard coded sadly
+                if (id <= 2)
+                {
+                    GameRoom gr = new GameRoom(playerWaitingForMatchWithID, id);
+                    gameRooms.AddLast(gr);
 
                 // send message to both clients
                 // TODO: upon game start, assign the proper ID to the player... just pass in gr.playerNum
                 // TODO: change so that we can scale up to as many players as we can as spectatorss
 
-                // assign ID
-                SendMessageToClient(ServerToClientSignifiers.GameStart + "," + gr.players[0], gr.players[0]);
-                SendMessageToClient(ServerToClientSignifiers.GameStart + "," + gr.players[1], gr.players[1]);
+                
+                    SendMessageToClient(ServerToClientSignifiers.GameStart + "," + gr.players[0], gr.players[0]);
+                    SendMessageToClient(ServerToClientSignifiers.GameStart + "," + gr.players[1], gr.players[1]);
 
-                // establish turn order
-                SendMessageToClient(ServerToClientSignifiers.ChangeTurn + "," + gr.players[0], gr.players[0]);
-                SendMessageToClient(ServerToClientSignifiers.ChangeTurn + "," + gr.players[0], gr.players[1]);
+                    // establish turn order
+                    SendMessageToClient(ServerToClientSignifiers.ChangeTurn + "," + gr.players[0], gr.players[0]);
+                    SendMessageToClient(ServerToClientSignifiers.ChangeTurn + "," + gr.players[0], gr.players[1]);
 
-                Debug.Log("Room Established");
-
+                    Debug.Log("Room Established");
+                }
                 // assuming that the connection ID that's greater than 2 will automatically be considered a spectator
                 if (id > 2)
                 {
                     // TO-DO: Add spectators when the player count exceeds 2
+                    GameRoom gr = GetGameRoomWithClientID(1);
                     gr.AddSpectator(id);
                     SendMessageToClient(ServerToClientSignifiers.MidwayJoin + "", id);
+                    Debug.Log(gr.spectators);
 
                     // on the local board, update all the board units
                 }
                 else
                 {
-                    playerWaitingForMatchWithID = -1; // meaning the player isn't waiting anymore... would we still need this for spectators
+                    //playerWaitingForMatchWithID = -1; // meaning the player isn't waiting anymore... would we still need this for spectators
                 }
             }
         }
