@@ -230,10 +230,33 @@ public class NetworkedServer : MonoBehaviour
             // first time that a client sends a message, store the id of the client with this variable
             if (playerWaitingForMatchWithID == -1)
             {
-                Debug.Log("We need to get this player into a waiting queue");
-                playerWaitingForMatchWithID = id; // id becomes 1 in the first shot
-            }
+                if (id <= 2)
+                {
+                    Debug.Log("We need to get this player into a waiting queue");
+                    playerWaitingForMatchWithID = id; // id becomes 1 in the first shot
+                }
+                else if (id > 2)
+                {
+                    // TO-DO: Add spectators when the player count exceeds 2
+                    GameRoom gr = GetGameRoomWithClientID(1);
+                    if (gr == null)
+                    {
+                        gr = GetGameRoomWithClientID(2);
+                    }
+                    gr.AddSpectator(id);
+                    SendMessageToClient(ServerToClientSignifiers.MidwayJoin + "," + id, id);
 
+                    // run through the whole board and fill in data from the server to the client
+                    for (int i = 0; i < ticTacToeServerBoard.GetLength(0); i++)
+                    {
+                        for (int j = 0; j < ticTacToeServerBoard.GetLength(1); j++)
+                        {
+                            SendMessageToClient(ServerToClientSignifiers.UpdateSpectator + "," + i + "," + j + "," + ticTacToeServerBoard[i, j], id);
+                        }
+                    }
+                }
+            }
+            
             else // second time you run through
             {
 
@@ -260,33 +283,26 @@ public class NetworkedServer : MonoBehaviour
                     SendMessageToClient(ServerToClientSignifiers.ChangeTurn + "," + gr.players[0], gr.players[0]);
                     SendMessageToClient(ServerToClientSignifiers.ChangeTurn + "," + gr.players[0], gr.players[1]);
 
+                    // initialize the list
                     InitializeReplayList();
-                    Debug.Log("Last Index Used: " + lastIndexUsed);
-                }
-                // assuming that the connection ID that's greater than 2 will automatically be considered a spectator
-                if (id > 2)
-                {
-                    // TO-DO: Add spectators when the player count exceeds 2
-                    GameRoom gr = GetGameRoomWithClientID(1);
-                    gr.AddSpectator(id);
-                    SendMessageToClient(ServerToClientSignifiers.MidwayJoin + "," + id, id);
 
-                    // run through the whole board and fill in data from the server to the client
-                    for (int i = 0; i < ticTacToeServerBoard.GetLength(0); i++)
+                    // be able to update the list of replays for players when they enter
+                    // TEST: Send over information line by line
+
+                    foreach(NameAndIndex nameAndIndex in nameAndIndices)
                     {
-                        for (int j = 0; j < ticTacToeServerBoard.GetLength(1); j++)
-                        {
-                            SendMessageToClient(ServerToClientSignifiers.UpdateSpectator + "," + i + "," + j + "," + ticTacToeServerBoard[i, j], id);
-                        }
+                        SendMessageToClient(ServerToClientSignifiers.UpdateReplayList + "," + nameAndIndex.index + "," + nameAndIndex.replayName, gr.players[0]);
+                        SendMessageToClient(ServerToClientSignifiers.UpdateReplayList + "," + nameAndIndex.index + "," + nameAndIndex.replayName, gr.players[1]);
                     }
 
-                    // on the local board, update all the board units
+
+                    playerWaitingForMatchWithID = -1; // meaning the player isn't waiting anymore... would we still need this for spectators
+
                 }
-                else
-                {
-                    //playerWaitingForMatchWithID = -1; // meaning the player isn't waiting anymore... would we still need this for spectators
-                }
-            }
+               
+            } 
+            
+           
         }
 
         // once we have a game room set up ... not actually sending this signifier in
@@ -387,6 +403,7 @@ public class NetworkedServer : MonoBehaviour
                 }
 
                 // IMPORTANT TEST: Save the replay locally to the client
+                // register only on victory
                 SaveReplay();
             }
         }
@@ -399,12 +416,16 @@ public class NetworkedServer : MonoBehaviour
                 ResetServerBoard();
                 if (gr.players[0] == id)
                 {
+                    Debug.Log("Reset for P2");
                     SendMessageToClient(ServerToClientSignifiers.GameReset + "", gr.players[1]);
                 }
                 else
                 {
+                    Debug.Log("Reset for P1");
                     SendMessageToClient(ServerToClientSignifiers.GameReset + "", gr.players[0]);
                 }
+                //SendMessageToClient(ServerToClientSignifiers.UpdateReplayList + "," + nameAndIndices.Last.Value.index + "," + nameAndIndices.Last.Value.replayName, gr.players[0]);
+                //SendMessageToClient(ServerToClientSignifiers.UpdateReplayList + "," + nameAndIndices.Last.Value.index + "," + nameAndIndices.Last.Value.replayName, gr.players[1]);
 
                 // UPDATE cleared board for any spectators
                 foreach (int spectator in gr.spectators)
@@ -412,9 +433,15 @@ public class NetworkedServer : MonoBehaviour
                     SendMessageToClient(ServerToClientSignifiers.ResetSpectator + "", spectator);
                 }
 
+                
+
                 listOfActions.Clear();
 
             }
+        }
+        else if (signifier == ClientToServerSignifiers.RequestReplay)
+        {
+            Debug.Log("ReplayRequested @:" + csv[1] );
         }
 
     }
@@ -690,7 +717,7 @@ public static class ServerToClientSignifiers
     public const int ResetSpectator = 13;
 
     // replay functionality
-
     public const int ProcessReplay = 14;
     public const int UpdateReplayList = 15;
+    public const int EndReplay = 16;
 }
