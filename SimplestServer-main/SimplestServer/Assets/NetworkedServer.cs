@@ -38,6 +38,8 @@ public class NetworkedServer : MonoBehaviour
     //
     private int[,] ticTacToeServerBoard;
 
+  
+
     // Start is called before the first frame update
     void Start()
     {
@@ -47,6 +49,10 @@ public class NetworkedServer : MonoBehaviour
         unreliableChannelID = config.AddChannel(QosType.Unreliable);
         HostTopology topology = new HostTopology(config, maxConnections);
         hostID = NetworkTransport.AddHost(topology, socketPort, null);
+
+        // Create a localized server copy of the board
+        ticTacToeServerBoard = new int[3, 3];
+        ResetServerBoard();
 
 
         playerAccountFilePath = Application.dataPath + Path.DirectorySeparatorChar + IndexFilePath;
@@ -250,7 +256,15 @@ public class NetworkedServer : MonoBehaviour
                     GameRoom gr = GetGameRoomWithClientID(1);
                     gr.AddSpectator(id);
                     SendMessageToClient(ServerToClientSignifiers.MidwayJoin + "," + id, id);
-                    Debug.Log(gr.spectators);
+
+                    // run through the whole board and fill in data from the server to the client
+                    for (int i = 0; i < ticTacToeServerBoard.GetLength(0); i++)
+                    {
+                        for (int j = 0; j < ticTacToeServerBoard.GetLength(1); j++)
+                        {
+                            SendMessageToClient(ServerToClientSignifiers.UpdateSpectator + "," + i + "," + j + "," + ticTacToeServerBoard[i, j], id);
+                        }
+                    }
 
                     // on the local board, update all the board units
                 }
@@ -289,6 +303,10 @@ public class NetworkedServer : MonoBehaviour
                 // if it was player 1 that sent this in, send over to player 2
                 // intended order should be signifier, row, column, playerID (if player ID is 1, send it to 2 and vice versa)
                 Debug.Log(ServerToClientSignifiers.OpponentPlay + "," + csv[1] + "," + csv[2] + "," + csv[3]);
+
+                // add to the local server board
+                ticTacToeServerBoard[int.Parse(csv[1]), int.Parse(csv[2])] = int.Parse(csv[3]);
+
                 if (gr.players[0] == id)
                 {
                     currentTurn = gr.players[1];
@@ -352,6 +370,7 @@ public class NetworkedServer : MonoBehaviour
             GameRoom gr = GetGameRoomWithClientID(id);
             if (gr != null)
             {
+                ResetServerBoard();
                 if (gr.players[0] == id)
                 {
                     SendMessageToClient(ServerToClientSignifiers.GameReset + "", gr.players[1]);
@@ -368,6 +387,17 @@ public class NetworkedServer : MonoBehaviour
             }
         }
 
+    }
+
+    private void ResetServerBoard()
+    {
+	    for (int i = 0; i<ticTacToeServerBoard.GetLength(0); i++)
+	    {
+	       for (int j = 0; j<ticTacToeServerBoard.GetLength(1); i++)
+	       {
+	           ticTacToeServerBoard[i, j] = 0;
+	       }
+	    }
     }
 
     private void SavePlayerAccounts()
