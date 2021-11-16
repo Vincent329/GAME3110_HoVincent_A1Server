@@ -249,7 +249,7 @@ public class NetworkedServer : MonoBehaviour
                     // TO-DO: Add spectators when the player count exceeds 2
                     GameRoom gr = GetGameRoomWithClientID(1);
                     gr.AddSpectator(id);
-                    SendMessageToClient(ServerToClientSignifiers.MidwayJoin + "", id);
+                    SendMessageToClient(ServerToClientSignifiers.MidwayJoin + "," + id, id);
                     Debug.Log(gr.spectators);
 
                     // on the local board, update all the board units
@@ -306,7 +306,7 @@ public class NetworkedServer : MonoBehaviour
 
                 foreach (int spectators in gr.spectators)
                 {
-                    SendMessageToClient(ServerToClientSignifiers.UpdateSpectator + "", spectators);
+                    SendMessageToClient(ServerToClientSignifiers.UpdateSpectator + "," + csv[1] + "," + csv[2] + "," + csv[3], spectators);
                 }
             }
         }
