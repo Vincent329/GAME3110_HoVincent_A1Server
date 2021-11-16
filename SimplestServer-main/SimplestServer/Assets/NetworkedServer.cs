@@ -260,8 +260,8 @@ public class NetworkedServer : MonoBehaviour
                     SendMessageToClient(ServerToClientSignifiers.ChangeTurn + "," + gr.players[0], gr.players[0]);
                     SendMessageToClient(ServerToClientSignifiers.ChangeTurn + "," + gr.players[0], gr.players[1]);
 
-                    Debug.Log("Room Established");
                     InitializeReplayList();
+                    Debug.Log("Last Index Used: " + lastIndexUsed);
                 }
                 // assuming that the connection ID that's greater than 2 will automatically be considered a spectator
                 if (id > 2)
@@ -467,9 +467,10 @@ public class NetworkedServer : MonoBehaviour
     {
         nameAndIndices = new LinkedList<NameAndIndex>();
 
-        if (File.Exists(Application.dataPath + Path.DirectorySeparatorChar + replayListFilePath))
+        if (File.Exists(replayListFilePath))
         {
-            StreamReader sr = new StreamReader(Application.dataPath + Path.DirectorySeparatorChar + replayListFilePath);
+            Debug.Log("Found File");
+            StreamReader sr = new StreamReader(replayListFilePath);
 
             string line;
             while ((line = sr.ReadLine()) != null)
@@ -489,10 +490,6 @@ public class NetworkedServer : MonoBehaviour
                     nameAndIndices.AddLast(new NameAndIndex(int.Parse(csv[1]), csv[2]));
                 }
             }
-        }
-        else
-        {
-            lastIndexUsed = 0;
         }
 
         RefreshReplayNameList();
