@@ -15,21 +15,18 @@ public class NetworkedServer : MonoBehaviour
     int socketPort = 10563;
 
     LinkedList<PlayerAccount> playerAccounts;
-    LinkedList<string> listOfActions;
 
     const int PlayerAccountNameAndPassword = 1;
 
     const string IndexFilePath = "PlayerAccounts.txt";
     string playerAccountFilePath;
 
-    // replay system
-    const string ReplayFilePath = "ReplayList.txt";
-    string replayListFilePath;
 
     int playerWaitingForMatchWithID = -1;
 
     LinkedList<GameRoom> gameRooms;
 
+  
     // tic tac toe UI, for any users joining in part way, keep a record of the board on the server to communicate to the spectator client
     //
     // [0,0] [1,0] [2,0]
@@ -38,7 +35,22 @@ public class NetworkedServer : MonoBehaviour
     //
     private int[,] ticTacToeServerBoard;
 
-  
+
+
+    // ---------------- replay system ----------------------------
+
+    // Replay System
+    int lastIndexUsed;
+    LinkedList<string> listOfActions;
+
+    List<string> replayNames; // list of replay names
+    LinkedList<NameAndIndex> nameAndIndices;
+
+    const string ReplayFilePath = "ReplayList.txt";
+    string replayListFilePath;
+
+    const int LastUsedIndexSignifier = 1;
+    const int IndexAndNameSignifier = 2;
 
     // Start is called before the first frame update
     void Start()
@@ -56,13 +68,14 @@ public class NetworkedServer : MonoBehaviour
 
 
         playerAccountFilePath = Application.dataPath + Path.DirectorySeparatorChar + IndexFilePath;
-        replayListFilePath = Application.dataPath + Path.DirectorySeparatorChar + ReplayFilePath;
         
         playerAccounts = new LinkedList<PlayerAccount>();
         gameRooms = new LinkedList<GameRoom>();
 
         // REPLAY FUNCTIONALITY, save items on a list of strings
         listOfActions = new LinkedList<string>();
+        replayListFilePath = Application.dataPath + Path.DirectorySeparatorChar + ReplayFilePath;
+
         // READ THE LIST
         LoadPlayerAccounts();
 
@@ -248,6 +261,7 @@ public class NetworkedServer : MonoBehaviour
                     SendMessageToClient(ServerToClientSignifiers.ChangeTurn + "," + gr.players[0], gr.players[1]);
 
                     Debug.Log("Room Established");
+                    InitializeReplayList();
                 }
                 // assuming that the connection ID that's greater than 2 will automatically be considered a spectator
                 if (id > 2)
@@ -317,10 +331,12 @@ public class NetworkedServer : MonoBehaviour
                     currentTurn = gr.players[0];
                     SendMessageToClient(ServerToClientSignifiers.OpponentPlay + "," + csv[1] + "," + csv[2] + "," + csv[3], gr.players[0]);
                 }
-
                 // update turn order
                 SendMessageToClient(ServerToClientSignifiers.ChangeTurn + "," + currentTurn, gr.players[0]);
                 SendMessageToClient(ServerToClientSignifiers.ChangeTurn + "," + currentTurn, gr.players[1]);
+
+                // add to the list of actions... row, column, playerIDAtPosition
+                listOfActions.AddLast(csv[1] + "," + csv[2] + "," + csv[3]);
 
                 foreach (int spectators in gr.spectators)
                 {
@@ -353,6 +369,13 @@ public class NetworkedServer : MonoBehaviour
             GameRoom gr = GetGameRoomWithClientID(id);
             if (gr != null)
             {
+                // TO DO: save all actions to a string file (IMPORTANT)
+                // debug, output all the actions taken
+                foreach(string actions in listOfActions)
+                {
+                    Debug.Log(actions);
+                    // log all these actions into a text file
+                }
 
                 if (gr.players[0] == id)
                 {
@@ -362,6 +385,9 @@ public class NetworkedServer : MonoBehaviour
                 {
                     SendMessageToClient(ServerToClientSignifiers.NotifyOpponentWin + "," + id , gr.players[0]);
                 }
+
+                // IMPORTANT TEST: Save the replay locally to the client
+                SaveReplay();
             }
         }
         // SIGNIFIER 8
@@ -380,10 +406,14 @@ public class NetworkedServer : MonoBehaviour
                     SendMessageToClient(ServerToClientSignifiers.GameReset + "", gr.players[0]);
                 }
 
+                // UPDATE cleared board for any spectators
                 foreach (int spectator in gr.spectators)
                 {
                     SendMessageToClient(ServerToClientSignifiers.ResetSpectator + "", spectator);
                 }
+
+                listOfActions.Clear();
+
             }
         }
 
@@ -431,6 +461,137 @@ public class NetworkedServer : MonoBehaviour
             sr.Close();
         }
     }
+
+    // ----------------- REPLAY SYSTEM FUNCTIONS ---------------------------
+    private void InitializeReplayList()
+    {
+        nameAndIndices = new LinkedList<NameAndIndex>();
+
+        if (File.Exists(Application.dataPath + Path.DirectorySeparatorChar + replayListFilePath))
+        {
+            StreamReader sr = new StreamReader(Application.dataPath + Path.DirectorySeparatorChar + replayListFilePath);
+
+            string line;
+            while ((line = sr.ReadLine()) != null)
+            {
+                //Debug.Log(line);
+                string[] csv = line.Split(',');
+                int signifier = int.Parse(csv[0]);
+
+                // searches the indices list, if it's the last used index signifier, it'll store the value of the last item on the list
+                if (signifier == LastUsedIndexSignifier)
+                {
+                    lastIndexUsed = int.Parse(csv[1]);
+                }
+                // otherwise we detail the list at the start of runtime
+                else if (signifier == IndexAndNameSignifier)
+                {
+                    nameAndIndices.AddLast(new NameAndIndex(int.Parse(csv[1]), csv[2]));
+                }
+            }
+        }
+        else
+        {
+            lastIndexUsed = 0;
+        }
+
+        RefreshReplayNameList();
+        
+        // find some way to send the updated list over to the client side of players 1 and 2
+        // SendMessageToClient(ServerToClientSignifier.UpdateIndex + "", players);
+    }
+
+    /// <summary>
+    /// add anything to replay names
+    /// </summary>
+    private void RefreshReplayNameList()
+    {
+        // Initialize list of replay names
+        replayNames = new List<string>();
+
+        // this might end up being just numbers
+        foreach (NameAndIndex nameAndIndex in nameAndIndices)
+        {
+            replayNames.Add(nameAndIndex.replayName);
+        }
+
+    }
+
+    /// <summary>
+    /// update an index of replays to the server
+    /// </summary>
+    private void SaveReplay()
+    {
+        lastIndexUsed++;
+        
+        // With this function call, save list of actions to the text file
+        SaveReplayToList(Application.dataPath + Path.DirectorySeparatorChar + lastIndexUsed + ".txt");
+        nameAndIndices.AddLast(new NameAndIndex(lastIndexUsed, "Replay " + lastIndexUsed));
+
+        SaveIndexManagementFile();
+        RefreshReplayNameList();
+        Debug.Log("Saving...");
+    }
+
+    private void SaveIndexManagementFile()
+    {
+        StreamWriter sw = new StreamWriter(Application.dataPath + Path.DirectorySeparatorChar + ReplayFilePath);
+        sw.WriteLine(LastUsedIndexSignifier + "," + lastIndexUsed);
+
+        foreach(NameAndIndex nameAndIndex in nameAndIndices)
+        {
+            sw.WriteLine(IndexAndNameSignifier + "," + nameAndIndex.index + "," + nameAndIndex.replayName);
+        }
+        sw.Close();
+    }
+
+    private void SaveReplayToList(string fileName)
+    {
+        StreamWriter sr = new StreamWriter(fileName);
+
+        foreach(string line in listOfActions)
+        {
+            sr.WriteLine(line);
+        }
+        sr.Close();
+    }
+
+    // send replay names string over to client side
+    public List<string> GetListofReplayNames()
+    {
+        return replayNames;
+    }
+
+    private void LoadReplays(string selectedName)
+    {
+        int indexToLoad = -1;
+
+        foreach (NameAndIndex nameAndIndex in nameAndIndices)
+        {
+            if (nameAndIndex.replayName == selectedName)
+            {
+                indexToLoad = nameAndIndex.index;
+            }
+        }
+        Debug.Log("Load " + selectedName);
+    }
+    
+    // this is the structure of how we will be saving the list of replays
+    public class NameAndIndex
+    {
+        public string replayName;
+        public int index;
+
+        public NameAndIndex(int inIndex, string inName)
+        {
+            replayName = inName;
+            index = inIndex;
+        }
+    }
+
+
+
+    // ----------------- Game Room functionalities ----------------------
 
     private GameRoom GetGameRoomWithClientID(int id)
     {
@@ -495,17 +656,20 @@ public class GameRoom
     }
 }
 
-
 public static class ClientToServerSignifiers
 {
     public const int CreateAccount = 1;
     public const int Login = 2;
     public const int WaitingToJoinGameRoom = 3;
     public const int TicTacToe = 4;
+
+    // Game process actions
     public const int PlayerAction = 5;
     public const int SendPresetMessage = 6;
     public const int PlayerWins = 7;
     public const int ResetGame = 8;
+
+    // Replay System functionality
     public const int LogAction = 9;
     public const int RequestReplay = 10;
 
@@ -522,7 +686,14 @@ public static class ServerToClientSignifiers
     public const int NotifyOpponentWin = 8; // notify to the opponent that there's a win
     public const int ChangeTurn = 9;
     public const int GameReset = 10;
+
+    // spectator functions
     public const int MidwayJoin = 11;
     public const int UpdateSpectator = 12;
     public const int ResetSpectator = 13;
+
+    // replay functionality
+
+    public const int ProcessReplay = 14;
+    public const int UpdateReplayList = 15;
 }
