@@ -391,9 +391,9 @@ public class NetworkedServer : MonoBehaviour
 
     private void ResetServerBoard()
     {
-	    for (int i = 0; i<ticTacToeServerBoard.GetLength(0); i++)
+	    for (int i = 0; i < ticTacToeServerBoard.GetLength(0); i++)
 	    {
-	       for (int j = 0; j<ticTacToeServerBoard.GetLength(1); i++)
+	       for (int j = 0; j < ticTacToeServerBoard.GetLength(1); j++)
 	       {
 	           ticTacToeServerBoard[i, j] = 0;
 	       }
