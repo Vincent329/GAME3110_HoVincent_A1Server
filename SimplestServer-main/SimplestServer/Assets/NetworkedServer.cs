@@ -48,7 +48,7 @@ public class NetworkedServer : MonoBehaviour
 
     const string ReplayFilePath = "ReplayList.txt";
     string replayListFilePath;
-
+       
     const int LastUsedIndexSignifier = 1;
     const int IndexAndNameSignifier = 2;
 
@@ -603,6 +603,10 @@ public class NetworkedServer : MonoBehaviour
         PlayReplay(indexToLoad);
     }
 
+    /// <summary>
+    /// Plays the replay
+    /// </summary>
+    /// <param name="replayIndex"></param>
     private void PlayReplay(int replayIndex)
     {
         StreamReader sr = new StreamReader(Application.dataPath + Path.DirectorySeparatorChar + replayIndex + ".txt");
@@ -618,19 +622,21 @@ public class NetworkedServer : MonoBehaviour
             SendMessageToClient(ServerToClientSignifiers.StartReplay + "", player);
         }
      
-
         while ((line = sr.ReadLine()) != null)
         {
-            string[] csv = line.Split(',');
-            foreach(int player in gr.players)
-            {
-                SendMessageToClient(ServerToClientSignifiers.ProcessReplay + "," + csv[0] + "," + csv[1] + "," + csv[2], player);
+                string[] csv = line.Split(',');
+                ticTacToeServerBoard[int.Parse(csv[0]), int.Parse(csv[1])] = int.Parse(csv[2]);
 
-            }
-            foreach (int spectator in gr.spectators)
-            {
-                SendMessageToClient(ServerToClientSignifiers.ProcessReplay + "," + csv[0] + "," + csv[1] + "," + csv[2], spectator);
-            }
+                foreach (int player in gr.players)
+                {
+                    SendMessageToClient(ServerToClientSignifiers.ProcessReplay + "," + csv[0] + "," + csv[1] + "," + csv[2], player);
+
+                }
+                foreach (int spectator in gr.spectators)
+                {
+                    SendMessageToClient(ServerToClientSignifiers.ProcessReplay + "," + csv[0] + "," + csv[1] + "," + csv[2], spectator);
+                }
+              
         }
         foreach (int player in gr.players)
         {
@@ -638,11 +644,7 @@ public class NetworkedServer : MonoBehaviour
         }
 
     }
-    
-    private IEnumerator Delay()
-    {
-        yield return new WaitForSeconds(100.0f);
-    }
+
     // this is the structure of how we will be saving the list of replays
     public class NameAndIndex
     {
