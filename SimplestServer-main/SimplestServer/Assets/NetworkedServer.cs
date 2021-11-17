@@ -424,8 +424,8 @@ public class NetworkedServer : MonoBehaviour
                     Debug.Log("Reset for P1");
                     SendMessageToClient(ServerToClientSignifiers.GameReset + "", gr.players[0]);
                 }
-                //SendMessageToClient(ServerToClientSignifiers.UpdateReplayList + "," + nameAndIndices.Last.Value.index + "," + nameAndIndices.Last.Value.replayName, gr.players[0]);
-                //SendMessageToClient(ServerToClientSignifiers.UpdateReplayList + "," + nameAndIndices.Last.Value.index + "," + nameAndIndices.Last.Value.replayName, gr.players[1]);
+                SendMessageToClient(ServerToClientSignifiers.UpdateReplayList + "," + nameAndIndices.Last.Value.index + "," + nameAndIndices.Last.Value.replayName, gr.players[0]);
+                SendMessageToClient(ServerToClientSignifiers.UpdateReplayList + "," + nameAndIndices.Last.Value.index + "," + nameAndIndices.Last.Value.replayName, gr.players[1]);
 
                 // UPDATE cleared board for any spectators
                 foreach (int spectator in gr.spectators)
