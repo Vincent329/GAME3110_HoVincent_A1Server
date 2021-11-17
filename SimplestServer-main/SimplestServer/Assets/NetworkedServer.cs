@@ -25,7 +25,6 @@ public class NetworkedServer : MonoBehaviour
     int playerWaitingForMatchWithID = -1;
 
     LinkedList<GameRoom> gameRooms;
-
   
     // tic tac toe UI, for any users joining in part way, keep a record of the board on the server to communicate to the spectator client
     //
@@ -624,19 +623,19 @@ public class NetworkedServer : MonoBehaviour
      
         while ((line = sr.ReadLine()) != null)
         {
-                string[] csv = line.Split(',');
-                ticTacToeServerBoard[int.Parse(csv[0]), int.Parse(csv[1])] = int.Parse(csv[2]);
+            string[] csv = line.Split(',');
+            ticTacToeServerBoard[int.Parse(csv[0]), int.Parse(csv[1])] = int.Parse(csv[2]);
 
-                foreach (int player in gr.players)
-                {
-                    SendMessageToClient(ServerToClientSignifiers.ProcessReplay + "," + csv[0] + "," + csv[1] + "," + csv[2], player);
+            foreach (int player in gr.players)
+            {
+                SendMessageToClient(ServerToClientSignifiers.ProcessReplay + "," + csv[0] + "," + csv[1] + "," + csv[2], player);
+            }
+            foreach (int spectator in gr.spectators)
+            {
+                SendMessageToClient(ServerToClientSignifiers.ProcessReplay + "," + csv[0] + "," + csv[1] + "," + csv[2], spectator);
+            }
+            
 
-                }
-                foreach (int spectator in gr.spectators)
-                {
-                    SendMessageToClient(ServerToClientSignifiers.ProcessReplay + "," + csv[0] + "," + csv[1] + "," + csv[2], spectator);
-                }
-              
         }
         foreach (int player in gr.players)
         {
