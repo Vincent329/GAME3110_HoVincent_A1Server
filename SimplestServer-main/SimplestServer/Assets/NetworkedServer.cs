@@ -367,15 +367,14 @@ public class NetworkedServer : MonoBehaviour
 
             if (gr != null)
             {
-                if (gr.players[0] == id)
+                foreach (int player in gr.players)
                 {
-                    SendMessageToClient(ServerToClientSignifiers.SendMessage + "," + csv[1], gr.players[1]);
+                    SendMessageToClient(ServerToClientSignifiers.SendMessage + "," + csv[1], player);
                 }
-                else
+                foreach (int spectator in gr.spectators)
                 {
-                    SendMessageToClient(ServerToClientSignifiers.SendMessage + "," + csv[1], gr.players[0]);
+                    SendMessageToClient(ServerToClientSignifiers.SendMessage + "," + csv[1], spectator);
                 }
-
             }
         }
         // SIGNIFIER 7
