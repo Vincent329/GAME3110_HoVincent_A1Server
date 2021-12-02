@@ -12,7 +12,7 @@ public class NetworkedServer : MonoBehaviour
     int reliableChannelID;
     int unreliableChannelID;
     int hostID;
-    int socketPort = 10563;
+    int socketPort = 10653;
 
     LinkedList<PlayerAccount> playerAccounts;
 
@@ -200,7 +200,7 @@ public class NetworkedServer : MonoBehaviour
                     if (p == pa.password)
                     {
                         Debug.Log("Login Account");
-                        SendMessageToClient(ServerToClientSignifiers.LoginComplete + "", id);
+                        SendMessageToClient(ServerToClientSignifiers.LoginComplete + "," + n, id);
                         msgHasBeenSentToClient = true;
                     }
                     else
@@ -764,4 +764,6 @@ public static class ServerToClientSignifiers
     public const int UpdateReplayList = 15;
     public const int StartReplay = 16;
     public const int EndReplay = 17;
+    public const int SaveReplay = 18;
+
 }
