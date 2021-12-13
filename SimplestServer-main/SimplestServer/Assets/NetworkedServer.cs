@@ -173,7 +173,7 @@ public class NetworkedServer : MonoBehaviour
                 PlayerAccount newPlayerAccount = new PlayerAccount(n, p);
 
                 playerAccounts.AddLast(newPlayerAccount);
-                SendMessageToClient(ServerToClientSignifiers.AccountCreationComplete + "", id);
+                SendMessageToClient(ServerToClientSignifiers.AccountCreationComplete + "," + n, id);
 
                 //save list to hard drive ** TO DO ***
                 SavePlayerAccounts();
@@ -272,8 +272,7 @@ public class NetworkedServer : MonoBehaviour
 
                     // send message to both clients
                     // TODO: upon game start, assign the proper ID to the player... just pass in gr.playerNum
-                    // TODO: change so that we can scale up to as many players as we can as spectatorss
-
+                    // TODO: change so that we can scale up to as many players as we can as spectators
 
                     SendMessageToClient(ServerToClientSignifiers.GameStart + "," + gr.players[0], gr.players[0]);
                     SendMessageToClient(ServerToClientSignifiers.GameStart + "," + gr.players[1], gr.players[1]);
@@ -633,8 +632,6 @@ public class NetworkedServer : MonoBehaviour
             {
                 SendMessageToClient(ServerToClientSignifiers.ProcessReplay + "," + csv[0] + "," + csv[1] + "," + csv[2], spectator);
             }
-            
-
         }
         foreach (int player in gr.players)
         {
