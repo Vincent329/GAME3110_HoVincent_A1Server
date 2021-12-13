@@ -439,6 +439,8 @@ public class NetworkedServer : MonoBehaviour
             {
                 SendMessageToClient(ServerToClientSignifiers.UpdateReplayList + "," + replayNameAndIndices.Last.Value.index + "," + replayNameAndIndices.Last.Value.replayName, gr.players[0]);
                 SendMessageToClient(ServerToClientSignifiers.UpdateReplayList + "," + replayNameAndIndices.Last.Value.index + "," + replayNameAndIndices.Last.Value.replayName, gr.players[1]);
+                SendMessageToClient(ServerToClientSignifiers.ReplaySaved + "", gr.players[0]);
+                SendMessageToClient(ServerToClientSignifiers.ReplaySaved + "", gr.players[1]);
             }
         }
         else if (signifier == ClientToServerSignifiers.RequestReplay)
@@ -528,22 +530,6 @@ public class NetworkedServer : MonoBehaviour
         // find some way to send the updated list over to the client side of players 1 and 2
         // SendMessageToClient(ServerToClientSignifier.UpdateIndex + "", players);
     }
-
-    /// <summary>
-    /// add anything to replay names
-    /// </summary>
-    //private void RefreshReplayNameList()
-    //{
-    //    // Initialize list of replay names
-    //    replayNames = new List<string>();
-
-    //    // this might end up being just numbers
-    //    foreach (NameAndIndex nameAndIndex in nameAndIndices)
-    //    {
-    //        replayNames.Add(nameAndIndex.replayName);
-    //    }
-
-    //}
 
     /// <summary>
     /// update an index of replays to the server
@@ -761,6 +747,6 @@ public static class ServerToClientSignifiers
     public const int UpdateReplayList = 15;
     public const int StartReplay = 16;
     public const int EndReplay = 17;
-    public const int SaveReplay = 18;
+    public const int ReplaySaved = 18;
 
 }
